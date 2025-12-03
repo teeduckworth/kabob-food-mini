@@ -1,0 +1,702 @@
+openapi: 3.0.3
+title: KabobFood Backend API
+version: 0.1.0
+servers:
+  - url: https://api.example.com
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Service healthy
+  /version:
+    get:
+      summary: Service version
+      responses:
+        '200':
+          description: Version payload
+  /auth/telegram:
+    post:
+      summary: Exchange Telegram initData for JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                init_data:
+                  type: string
+              required: [init_data]
+      responses:
+        '200':
+          description: Token + profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  profile:
+                    $ref: '#/components/schemas/Profile'
+  /menu:
+    get:
+      summary: Cached menu
+      responses:
+        '200':
+          description: Categories with products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MenuCategory'
+  /regions:
+    get:
+      summary: Available delivery regions
+      responses:
+        '200':
+          description: Regions list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  regions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Region'
+  /profile:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Current user profile
+      responses:
+        '200':
+          description: Profile with addresses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+  /addresses:
+    get:
+      security:
+        - bearerAuth: []
+      summary: List addresses
+      responses:
+        '200':
+          description: Addresses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  addresses:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Address'
+    post:
+      security:
+        - bearerAuth: []
+      summary: Create address
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+  /addresses/{id}:
+    put:
+      security:
+        - bearerAuth: []
+      summary: Update address
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressInput'
+      responses:
+        '200':
+          description: Updated address
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+    delete:
+      security:
+        - bearerAuth: []
+      summary: Delete address
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Deleted
+  /orders:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Create order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: Created order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+    get:
+      security:
+        - bearerAuth: []
+      summary: List user orders
+      responses:
+        '200':
+          description: Orders list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+  /orders/{id}:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Get order details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+  /admin/login:
+    post:
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+              required: [username, password]
+      responses:
+        '200':
+          description: Admin token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+  /admin/categories:
+    post:
+      security:
+        - adminAuth: []
+      summary: Create category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+      responses:
+        '201':
+          description: Category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+  /admin/categories/{id}:
+    put:
+      security:
+        - adminAuth: []
+      summary: Update category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+      responses:
+        '200':
+          description: Category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+    delete:
+      security:
+        - adminAuth: []
+      summary: Delete category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Deleted
+  /admin/products:
+    post:
+      security:
+        - adminAuth: []
+      summary: Create product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '201':
+          description: Product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+  /admin/products/{id}:
+    put:
+      security:
+        - adminAuth: []
+      summary: Update product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '200':
+          description: Product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+    delete:
+      security:
+        - adminAuth: []
+      summary: Delete product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Deleted
+  /admin/regions:
+    post:
+      security:
+        - adminAuth: []
+      summary: Create region
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegionInput'
+      responses:
+        '201':
+          description: Region
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Region'
+  /admin/regions/{id}:
+    put:
+      security:
+        - adminAuth: []
+      summary: Update region
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegionInput'
+      responses:
+        '200':
+          description: Region
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Region'
+    delete:
+      security:
+        - adminAuth: []
+      summary: Delete region
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Deleted
+  /admin/orders:
+    get:
+      security:
+        - adminAuth: []
+      summary: List recent orders
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Orders list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+  /admin/orders/{id}/status:
+    put:
+      security:
+        - adminAuth: []
+      summary: Update order status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+              required: [status]
+      responses:
+        '200':
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    adminAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Profile:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        telegram_id:
+          type: integer
+        first_name:
+          type: string
+        last_name:
+          type: string
+        username:
+          type: string
+        phone:
+          type: string
+        language:
+          type: string
+    Address:
+      type: object
+      properties:
+        id:
+          type: integer
+        region_id:
+          type: integer
+        street:
+          type: string
+        house:
+          type: string
+        entrance:
+          type: string
+        flat:
+          type: string
+        comment:
+          type: string
+        is_default:
+          type: boolean
+    AddressInput:
+      type: object
+      properties:
+        region_id:
+          type: integer
+        street:
+          type: string
+        house:
+          type: string
+        entrance:
+          type: string
+        flat:
+          type: string
+        comment:
+          type: string
+        is_default:
+          type: boolean
+      required: [region_id, street, house]
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        emoji:
+          type: string
+        sort_order:
+          type: integer
+        is_active:
+          type: boolean
+    CategoryInput:
+      type: object
+      properties:
+        name:
+          type: string
+        emoji:
+          type: string
+        sort_order:
+          type: integer
+        is_active:
+          type: boolean
+      required: [name]
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        category_id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        old_price:
+            type: number
+        image_url:
+          type: string
+        is_active:
+          type: boolean
+        sort_order:
+          type: integer
+    ProductInput:
+      allOf:
+        - $ref: '#/components/schemas/Product'
+      required: [category_id, name, price]
+    Region:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        delivery_price:
+          type: number
+        is_active:
+          type: boolean
+    RegionInput:
+      type: object
+      properties:
+        name:
+          type: string
+        delivery_price:
+          type: number
+        is_active:
+          type: boolean
+      required: [name, delivery_price]
+    MenuCategory:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        emoji:
+          type: string
+        sort_order:
+          type: integer
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        client_request_id:
+          type: string
+        user_id:
+          type: integer
+        address_id:
+          type: integer
+        type:
+          type: string
+        payment_method:
+          type: string
+        status:
+          type: string
+        region_id:
+          type: integer
+        delivery_price:
+          type: number
+        items_total:
+          type: number
+        total_price:
+          type: number
+        comment:
+          type: string
+        customer_name:
+          type: string
+        customer_phone:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+    OrderItem:
+      type: object
+      properties:
+        product_id:
+          type: integer
+        product_name:
+          type: string
+        qty:
+          type: integer
+        price:
+          type: number
+        total:
+          type: number
+    CreateOrderRequest:
+      type: object
+      properties:
+        client_request_id:
+          type: string
+        type:
+          type: string
+        region_id:
+          type: integer
+        address_id:
+          type: integer
+        payment_method:
+          type: string
+        customer_name:
+          type: string
+        customer_phone:
+          type: string
+        comment:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              product_id:
+                type: integer
+              qty:
+                type: integer
+            required: [product_id, qty]
+      required: [client_request_id, type, region_id, payment_method, customer_name, customer_phone, items]

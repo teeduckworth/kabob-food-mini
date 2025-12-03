@@ -1,0 +1,72 @@
+{
+  "info": {
+    "name": "KabobFood API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth Telegram",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "url": {"raw": "{{base_url}}/auth/telegram", "host": ["{{base_url}}"], "path": ["auth", "telegram"]},
+        "body": {"mode": "raw", "raw": "{\n  \"init_data\": \"...\"\n}"}
+      }
+    },
+    {
+      "name": "Get Menu",
+      "request": {"method": "GET", "url": {"raw": "{{base_url}}/menu", "host": ["{{base_url}}"], "path": ["menu"]}}
+    },
+    {
+      "name": "Create Order",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Authorization", "value": "Bearer {{token}}"}, {"key": "Content-Type", "value": "application/json"}],
+        "url": {"raw": "{{base_url}}/orders", "host": ["{{base_url}}"], "path": ["orders"]},
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"client_request_id\": \"00000000-0000-0000-0000-000000000001\",\n  \"type\": \"delivery\",\n  \"region_id\": 1,\n  \"address_id\": 1,\n  \"payment_method\": \"cash\",\n  \"customer_name\": \"John\",\n  \"customer_phone\": \"+1234567\",\n  \"items\": [{ \"product_id\": 1, \"qty\": 2 }]\n}"
+        }
+      }
+    },
+    {
+      "name": "Admin Login",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "url": {"raw": "{{base_url}}/admin/login", "host": ["{{base_url}}"], "path": ["admin", "login"]},
+        "body": {"mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"}
+      }
+    },
+    {
+      "name": "Admin List Orders",
+      "request": {
+        "method": "GET",
+        "header": [{"key": "Authorization", "value": "Bearer {{admin_token}}"}],
+        "url": {
+          "raw": "{{base_url}}/admin/orders?status=new&limit=50",
+          "host": ["{{base_url}}"],
+          "path": ["admin", "orders"],
+          "query": [
+            {"key": "status", "value": "new"},
+            {"key": "limit", "value": "50"}
+          ]
+        }
+      }
+    },
+    {
+      "name": "Admin Update Order Status",
+      "request": {
+        "method": "PUT",
+        "header": [{"key": "Authorization", "value": "Bearer {{admin_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+        "url": {"raw": "{{base_url}}/admin/orders/1/status", "host": ["{{base_url}}"], "path": ["admin", "orders", "1", "status"]},
+        "body": {"mode": "raw", "raw": "{\n  \"status\": \"accepted\"\n}"}
+      }
+    }
+  ],
+  "variable": [
+    {"key": "base_url", "value": "http://localhost:8080"},
+    {"key": "token", "value": ""},
+    {"key": "admin_token", "value": ""}
+  ]
+}
