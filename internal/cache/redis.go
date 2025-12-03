@@ -11,6 +11,10 @@ import (
 
 // NewRedis builds a redis client and validates the connection with a ping.
 func NewRedis(ctx context.Context, cfg config.RedisConfig) (*redis.Client, error) {
+	if cfg.URL == "" {
+		return nil, nil
+	}
+
 	var (
 		opts *redis.Options
 		err  error

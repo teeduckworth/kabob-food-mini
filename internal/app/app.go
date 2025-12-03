@@ -49,8 +49,9 @@ func New(cfg *config.Config, log *zap.Logger) (*App, error) {
 
 	redisClient, err := cachepkg.NewRedis(ctx, cfg.Redis)
 	if err != nil {
-		pool.Close()
-		return nil, err
+		// Continue without Redis cache if it is misconfigured or unavailable.
+		log.Warn("redis unavailable, running without cache", zap.Error(err))
+		redisClient = nil
 	}
 
 	metricsCollector := metrics.New()
@@ -72,7 +73,9 @@ func New(cfg *config.Config, log *zap.Logger) (*App, error) {
 	})
 	if err != nil {
 		pool.Close()
-		redisClient.Close()
+		if redisClient != nil {
+			redisClient.Close()
+		}
 		return nil, err
 	}
 
@@ -97,12 +100,16 @@ func New(cfg *config.Config, log *zap.Logger) (*App, error) {
 	adminAuthService, err := admin.NewAuthService(admin.AuthConfig{Repo: adminRepo, JWTSecret: cfg.JWT.Secret})
 	if err != nil {
 		pool.Close()
-		redisClient.Close()
+		if redisClient != nil {
+			redisClient.Close()
+		}
 		return nil, err
 	}
 	if err := adminAuthService.EnsureDefaultAdmin(ctx, cfg.Admin.DefaultUsername, cfg.Admin.DefaultPassword); err != nil {
 		pool.Close()
-		redisClient.Close()
+		if redisClient != nil {
+			redisClient.Close()
+		}
 		return nil, err
 	}
 	rateLimiterUsers := middleware.NewRateLimiter(cfg.RateLimit.UserLimit, cfg.RateLimit.Window)

@@ -41,7 +41,7 @@ type DatabaseConfig struct {
 
 // RedisConfig declares redis connection options.
 type RedisConfig struct {
-	URL         string        `env:"URL" envDefault:"redis://redis:6379/0"`
+	URL         string        `env:"URL"`
 	Password    string        `env:"PASSWORD"`
 	DialTimeout time.Duration `env:"DIAL_TIMEOUT" envDefault:"5s"`
 }
