@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# KabobFood Mini App UI
 
-## Getting Started
+Next.js + Tailwind клиент для Telegram Mini App. Покрывает сценарии меню, корзины, оформления заказа и профиля.
 
-First, run the development server:
+## Запуск
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Необходимые переменные окружения (создайте `.env.local`):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+NEXT_PUBLIC_API_URL=http://localhost:8080
+# опционально для локальной отладки без Telegram
+NEXT_PUBLIC_DEV_TOKEN=your-local-jwt
+NEXT_PUBLIC_DEV_INIT_DATA=query_string_from_telegram
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Структура
 
-## Learn More
+- `src/app/page.tsx` — меню, категории, карточки товаров
+- `src/app/checkout/page.tsx` — оформление заказа
+- `src/app/profile/page.tsx` — профиль/адреса (демо-токен)
+- `src/components/*` — UI-компоненты (карусель категорий, карточки, bottom-nav, корзина)
+- `src/store/cart.ts` — Zustand стора корзины
+- `src/lib/api.ts` — минимальный API-клиент
 
-To learn more about Next.js, take a look at the following resources:
+## TODO
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Настроить деплой (Vercel/Pages) и Mini App манифест
+- Добавить полноценное редактирование профиля (имя/телефон) и состояние заказа
+- Подготовить UI-тесты или стори для основных экранов
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Telegram WebApp интеграция
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `@twa-dev/sdk` сообщает, что мини-апп готово: вызываем `WebApp.ready()`, `expand()` и слушаем `themeChanged`, чтобы подхватывать цвета Telegram.
+- Кнопка Back внутри Telegram синхронизирована с роутингом Next.js: на внутренних страницах возвращает назад, на главной — закрывает мини-апп.
+- На интерфейсе есть отдельная кнопка «Закрыть», CTA-кнопки используют цветовую схему Telegram через CSS-переменные.
