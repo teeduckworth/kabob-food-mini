@@ -16,25 +16,41 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-
 const TOKEN_STORAGE_KEY = 'kabobfood_token';
 
-const isBrowser = typeof window !== 'undefined';
+type BrowserWindow = Window & typeof globalThis;
+
+type MaybeBrowser = typeof globalThis & { window?: BrowserWindow };
+
+function getBrowserWindow(): BrowserWindow | null {
+  if (typeof globalThis === 'undefined') return null;
+  const maybeBrowser = globalThis as MaybeBrowser;
+  return maybeBrowser.window ?? null;
+}
+
+function getSessionStorage(): Storage | null {
+  const win = getBrowserWindow();
+  return win?.sessionStorage ?? null;
+}
+
+function getQueryParam(name: string): string | null {
+  const win = getBrowserWindow();
+  if (!win) return null;
+  const search = win.location?.search ?? '';
+  if (!search) return null;
+  return new URLSearchParams(search).get(name);
+}
 
 function getDevToken(): string | null {
-  if (!isBrowser) return null;
-  const params = new URLSearchParams(window.location.search);
-  return params.get('token') || process.env.NEXT_PUBLIC_DEV_TOKEN || null;
+  return getQueryParam('token') || process.env.NEXT_PUBLIC_DEV_TOKEN || null;
 }
 
 function getInitData(): string | null {
-  if (!isBrowser) return null;
-  const webApp = getTelegramWebApp();
-  if (webApp?.initData) {
-    return webApp.initData;
+  const telegram = getTelegramWebApp();
+  if (telegram?.initData) {
+    return telegram.initData;
   }
-  const params = new URLSearchParams(window.location.search);
-  return params.get('tgWebAppData') || process.env.NEXT_PUBLIC_DEV_INIT_DATA || null;
+  return getQueryParam('tgWebAppData') || process.env.NEXT_PUBLIC_DEV_INIT_DATA || null;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -43,17 +59,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState<string | null>(null);
 
-  const loadProfile = useCallback(
-    async (jwt: string) => {
-      const data = await api.getProfile(jwt);
-      setProfile(data);
-    },
-    []
-  );
+  const loadProfile = useCallback(async (jwt: string) => {
+    const data = await api.getProfile(jwt);
+    setProfile(data);
+  }, []);
 
   const finishAuth = useCallback(
     async (jwt: string, profileData?: Profile) => {
-      sessionStorage.setItem(TOKEN_STORAGE_KEY, jwt);
+      getSessionStorage()?.setItem(TOKEN_STORAGE_KEY, jwt);
       setToken(jwt);
       if (profileData) {
         setProfile(profileData);
@@ -67,18 +80,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const authenticate = useCallback(async () => {
-    if (!isBrowser) return;
+    const storage = getSessionStorage();
+    if (!storage) {
+      setStatus('error');
+      setError('Нет доступа к sessionStorage (мини-апп нужно открыть в Telegram).');
+      return;
+    }
+
     setStatus('loading');
     setError(null);
 
-    const storedToken = sessionStorage.getItem(TOKEN_STORAGE_KEY);
+    const storedToken = storage.getItem(TOKEN_STORAGE_KEY);
     if (storedToken) {
       try {
         await finishAuth(storedToken);
         return;
       } catch (err) {
         console.error('Stored token is invalid, re-authenticating', err);
-        sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+        storage.removeItem(TOKEN_STORAGE_KEY);
       }
     }
 
@@ -104,7 +123,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [finishAuth]);
 
   useEffect(() => {
-    if (!isBrowser) return;
     authenticate();
   }, [authenticate]);
 

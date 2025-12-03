@@ -23,16 +23,17 @@ export interface TelegramWebApp {
   BackButton?: TelegramBackButton;
 }
 
-type TelegramWindow = Window & {
+type TelegramLikeGlobal = typeof globalThis & {
   Telegram?: {
     WebApp?: TelegramWebApp;
   };
 };
 
 export function getTelegramWebApp(): TelegramWebApp | null {
-  if (typeof window === 'undefined') {
+  const globalRef: TelegramLikeGlobal | undefined =
+    typeof globalThis !== 'undefined' ? (globalThis as TelegramLikeGlobal) : undefined;
+  if (!globalRef) {
     return null;
   }
-  const telegramWindow = window as TelegramWindow;
-  return telegramWindow.Telegram?.WebApp ?? null;
+  return globalRef.Telegram?.WebApp ?? null;
 }
