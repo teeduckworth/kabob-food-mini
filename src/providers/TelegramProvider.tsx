@@ -2,25 +2,26 @@
 
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import WebApp from '@twa-dev/sdk';
+import { getTelegramWebApp } from '@/lib/telegram';
 
 export function TelegramProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
-    if (!WebApp || typeof window === 'undefined') return;
+    const webApp = getTelegramWebApp();
+    if (!webApp) return;
     try {
-      WebApp.ready();
-      WebApp.expand();
+      webApp.ready();
+      webApp.expand?.();
     } catch (err) {
       console.warn('Telegram WebApp init skipped', err);
     }
 
     const applyTheme = () => {
-      if (!WebApp?.themeParams) return;
+      if (!webApp.themeParams) return;
       const root = document.documentElement;
-      const { bg_color, text_color, button_color, button_text_color } = WebApp.themeParams;
+      const { bg_color, text_color, button_color, button_text_color } = webApp.themeParams;
       if (bg_color) root.style.setProperty('--background', bg_color);
       if (text_color) root.style.setProperty('--foreground', text_color);
       if (button_color) root.style.setProperty('--tg-button', button_color);
@@ -31,34 +32,35 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
     applyTheme();
 
     const handler = () => applyTheme();
-    WebApp.onEvent?.('themeChanged', handler);
+    webApp.onEvent?.('themeChanged', handler);
 
     return () => {
-      WebApp.offEvent?.('themeChanged', handler);
+      webApp.offEvent?.('themeChanged', handler);
     };
   }, []);
 
   useEffect(() => {
-    if (!WebApp?.BackButton || typeof window === 'undefined') return;
+    const webApp = getTelegramWebApp();
+    if (!webApp?.BackButton) return;
 
     const handleBack = () => {
       if (pathname === '/') {
-        WebApp.close?.();
+        webApp.close?.();
       } else {
         router.back();
       }
     };
 
     if (pathname === '/') {
-      WebApp.BackButton.hide();
-      WebApp.BackButton.offClick(handleBack);
+      webApp.BackButton.hide();
+      webApp.BackButton.offClick(handleBack);
     } else {
-      WebApp.BackButton.show();
-      WebApp.BackButton.onClick(handleBack);
+      webApp.BackButton.show();
+      webApp.BackButton.onClick(handleBack);
     }
 
     return () => {
-      WebApp.BackButton.offClick(handleBack);
+      webApp.BackButton?.offClick(handleBack);
     };
   }, [pathname, router]);
 

@@ -1,8 +1,8 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import WebApp from '@twa-dev/sdk';
 import { api } from '@/lib/api';
+import { getTelegramWebApp } from '@/lib/telegram';
 import type { Profile } from '@/types/api';
 
 interface AuthContextValue {
@@ -29,8 +29,9 @@ function getDevToken(): string | null {
 
 function getInitData(): string | null {
   if (!isBrowser) return null;
-  if (WebApp?.initData) {
-    return WebApp.initData;
+  const webApp = getTelegramWebApp();
+  if (webApp?.initData) {
+    return webApp.initData;
   }
   const params = new URLSearchParams(window.location.search);
   return params.get('tgWebAppData') || process.env.NEXT_PUBLIC_DEV_INIT_DATA || null;
