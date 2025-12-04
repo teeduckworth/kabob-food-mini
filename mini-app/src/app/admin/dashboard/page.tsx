@@ -43,9 +43,12 @@ export default function AdminDashboardPage() {
   const [banner, setBanner] = useState<string | null>(null);
   const [categoryForm, setCategoryForm] = useState(createCategoryForm);
   const [productForm, setProductForm] = useState(createProductForm);
+  const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
+  const [editingProductId, setEditingProductId] = useState<number | null>(null);
   const [submittingCategory, setSubmittingCategory] = useState(false);
   const [submittingProduct, setSubmittingProduct] = useState(false);
   const [productActionId, setProductActionId] = useState<number | null>(null);
+  const [categoryActionId, setCategoryActionId] = useState<number | null>(null);
 
   const loadMenu = useCallback(async () => {
     setLoading(true);
@@ -99,6 +102,16 @@ export default function AdminDashboardPage() {
     setTimeout(() => setBanner(null), 4000);
   }
 
+  function resetCategoryForm() {
+    setCategoryForm(createCategoryForm());
+    setEditingCategoryId(null);
+  }
+
+  function resetProductForm() {
+    setProductForm(createProductForm());
+    setEditingProductId(null);
+  }
+
   async function handleCategorySubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!token || submittingCategory) return;
@@ -115,9 +128,14 @@ export default function AdminDashboardPage() {
         sort_order: Number(categoryForm.sort_order) || 0,
         is_active: categoryForm.is_active,
       };
-      await adminApi.createCategory(token, payload);
-      setCategoryForm(createCategoryForm());
-      showBanner('Категория добавлена');
+      if (editingCategoryId) {
+        await adminApi.updateCategory(token, editingCategoryId, payload);
+        showBanner('Категория обновлена');
+      } else {
+        await adminApi.createCategory(token, payload);
+        showBanner('Категория добавлена');
+      }
+      resetCategoryForm();
       await loadMenu();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка создания категории');
@@ -154,9 +172,14 @@ export default function AdminDashboardPage() {
         is_active: productForm.is_active,
         sort_order: Number(productForm.sort_order) || 0,
       };
-      await adminApi.createProduct(token, payload);
-      setProductForm(createProductForm());
-      showBanner('Блюдо добавлено');
+      if (editingProductId) {
+        await adminApi.updateProduct(token, editingProductId, payload);
+        showBanner('Блюдо обновлено');
+      } else {
+        await adminApi.createProduct(token, payload);
+        showBanner('Блюдо добавлено');
+      }
+      resetProductForm();
       await loadMenu();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка создания блюда');
@@ -185,6 +208,68 @@ export default function AdminDashboardPage() {
       await loadMenu();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка обновления блюда');
+    } finally {
+      setProductActionId(null);
+    }
+  }
+
+  function handleEditCategory(category: MenuCategory) {
+    setCategoryForm({
+      name: category.name,
+      emoji: category.emoji ?? '',
+      sort_order: String(category.sort_order ?? 0),
+      is_active: category.is_active ?? true,
+    });
+    setEditingCategoryId(category.id);
+  }
+
+  async function handleDeleteCategory(id: number) {
+    if (!token) return;
+    if (!window.confirm('Удалить категорию? Блюда внутри тоже исчезнут.')) return;
+    setCategoryActionId(id);
+    setError(null);
+    try {
+      await adminApi.deleteCategory(token, id);
+      showBanner('Категория удалена');
+      if (editingCategoryId === id) {
+        resetCategoryForm();
+      }
+      await loadMenu();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка удаления категории');
+    } finally {
+      setCategoryActionId(null);
+    }
+  }
+
+  function handleEditProduct(product: EnrichedProduct) {
+    setProductForm({
+      category_id: String(product.category_id),
+      name: product.name,
+      description: product.description ?? '',
+      price: String(product.price),
+      old_price: product.old_price ? String(product.old_price) : '',
+      image_url: product.image_url ?? '',
+      is_active: product.is_active,
+      sort_order: String(product.sort_order),
+    });
+    setEditingProductId(product.id);
+  }
+
+  async function handleDeleteProduct(id: number) {
+    if (!token) return;
+    if (!window.confirm('Удалить блюдо?')) return;
+    setProductActionId(id);
+    setError(null);
+    try {
+      await adminApi.deleteProduct(token, id);
+      showBanner('Блюдо удалено');
+      if (editingProductId === id) {
+        resetProductForm();
+      }
+      await loadMenu();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка удаления блюда');
     } finally {
       setProductActionId(null);
     }
@@ -237,10 +322,22 @@ export default function AdminDashboardPage() {
         <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-white/60">Добавить категорию</p>
-              <h3 className="text-xl font-semibold">Новая витрина</h3>
+              <p className="text-sm text-white/60">{editingCategoryId ? 'Редактировать категорию' : 'Добавить категорию'}</p>
+              <h3 className="text-xl font-semibold">
+                {editingCategoryId ? 'Обновление витрины' : 'Новая витрина'}
+              </h3>
             </div>
-            <span className="text-xs uppercase tracking-[0.3em] text-white/40">Luxury tier</span>
+            {editingCategoryId ? (
+              <button
+                type="button"
+                onClick={resetCategoryForm}
+                className="text-xs uppercase tracking-[0.3em] text-white/60 hover:text-white"
+              >
+                Отменить
+              </button>
+            ) : (
+              <span className="text-xs uppercase tracking-[0.3em] text-white/40">Luxury tier</span>
+            )}
           </div>
           <form className="mt-6 space-y-4" onSubmit={handleCategorySubmit}>
             <div className="grid gap-3 md:grid-cols-2">
@@ -286,7 +383,11 @@ export default function AdminDashboardPage() {
               disabled={submittingCategory}
               className="w-full rounded-2xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 px-4 py-3 text-center font-semibold text-slate-900 shadow-lg shadow-amber-500/30 hover:opacity-90 disabled:opacity-60"
             >
-              {submittingCategory ? 'Сохраняем...' : 'Создать категорию'}
+              {submittingCategory
+                ? 'Сохраняем...'
+                : editingCategoryId
+                  ? 'Обновить категорию'
+                  : 'Создать категорию'}
             </button>
           </form>
         </div>
@@ -294,10 +395,22 @@ export default function AdminDashboardPage() {
         <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-white/60">Добавить блюдо</p>
-              <h3 className="text-xl font-semibold">Новая позиция</h3>
+              <p className="text-sm text-white/60">{editingProductId ? 'Редактировать блюдо' : 'Добавить блюдо'}</p>
+              <h3 className="text-xl font-semibold">
+                {editingProductId ? 'Обновление позиции' : 'Новая позиция'}
+              </h3>
             </div>
-            <span className="text-xs uppercase tracking-[0.3em] text-white/40">Chef signature</span>
+            {editingProductId ? (
+              <button
+                type="button"
+                onClick={resetProductForm}
+                className="text-xs uppercase tracking-[0.3em] text-white/60 hover:text-white"
+              >
+                Отменить
+              </button>
+            ) : (
+              <span className="text-xs uppercase tracking-[0.3em] text-white/40">Chef signature</span>
+            )}
           </div>
           <form className="mt-6 space-y-4" onSubmit={handleProductSubmit}>
             <label className="space-y-2 text-sm text-white/70">
@@ -394,7 +507,11 @@ export default function AdminDashboardPage() {
               disabled={submittingProduct}
               className="w-full rounded-2xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 px-4 py-3 text-center font-semibold text-slate-900 shadow-lg shadow-amber-500/30 hover:opacity-90 disabled:opacity-60"
             >
-              {submittingProduct ? 'Добавляем...' : 'Создать блюдо'}
+              {submittingProduct
+                ? 'Сохраняем...'
+                : editingProductId
+                  ? 'Обновить блюдо'
+                  : 'Создать блюдо'}
             </button>
           </form>
         </div>
@@ -437,6 +554,23 @@ export default function AdminDashboardPage() {
                     </span>
                   )}
                 </div>
+                <div className="mt-4 flex flex-wrap gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => handleEditCategory(category)}
+                    className="rounded-full border border-white/20 px-4 py-2 text-white/80 transition hover:border-white"
+                  >
+                    Изменить
+                  </button>
+                  <button
+                    type="button"
+                    disabled={categoryActionId === category.id}
+                    onClick={() => handleDeleteCategory(category.id)}
+                    className="rounded-full border border-rose-300/40 px-4 py-2 text-rose-200 transition hover:border-rose-200 disabled:opacity-50"
+                  >
+                    {categoryActionId === category.id ? 'Удаляем...' : 'Удалить'}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -472,17 +606,32 @@ export default function AdminDashboardPage() {
                   <span className={`text-xs ${product.is_active ? 'text-emerald-300' : 'text-white/40'}`}>
                     {product.is_active ? 'Показывается клиентам' : 'Скрыто'}
                   </span>
-                  <button
-                    onClick={() => handleToggleProduct(product)}
-                    disabled={productActionId === product.id}
-                    className="rounded-full border border-white/20 px-4 py-2 text-xs font-medium text-white/80 transition hover:border-white disabled:opacity-50"
-                  >
-                    {productActionId === product.id
-                      ? 'Сохраняем...'
-                      : product.is_active
-                        ? 'Скрыть'
-                        : 'Вернуть в меню'}
-                  </button>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <button
+                      onClick={() => handleEditProduct(product)}
+                      className="rounded-full border border-white/20 px-4 py-2 text-white/80 transition hover:border-white"
+                    >
+                      Изменить
+                    </button>
+                    <button
+                      onClick={() => handleToggleProduct(product)}
+                      disabled={productActionId === product.id}
+                      className="rounded-full border border-white/20 px-4 py-2 text-white/80 transition hover:border-white disabled:opacity-50"
+                    >
+                      {productActionId === product.id
+                        ? 'Сохраняем...'
+                        : product.is_active
+                          ? 'Скрыть'
+                          : 'Вернуть в меню'}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteProduct(product.id)}
+                      disabled={productActionId === product.id}
+                      className="rounded-full border border-rose-300/40 px-4 py-2 text-rose-200 transition hover:border-rose-200 disabled:opacity-50"
+                    >
+                      {productActionId === product.id ? 'Удаляем...' : 'Удалить'}
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

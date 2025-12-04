@@ -76,6 +76,23 @@ export const adminApi = {
       },
       token
     ),
+  updateCategory: (token: string, id: number, body: AdminCategoryInput) =>
+    request<AdminCategory>(
+      `/admin/categories/${id}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      },
+      token
+    ),
+  deleteCategory: (token: string, id: number) =>
+    request<void>(
+      `/admin/categories/${id}`,
+      {
+        method: 'DELETE',
+      },
+      token
+    ),
   createProduct: (token: string, body: AdminProductInput) =>
     request<Product>(
       '/admin/products',
@@ -91,6 +108,14 @@ export const adminApi = {
       {
         method: 'PUT',
         body: JSON.stringify(body),
+      },
+      token
+    ),
+  deleteProduct: (token: string, id: number) =>
+    request<void>(
+      `/admin/products/${id}`,
+      {
+        method: 'DELETE',
       },
       token
     ),
