@@ -1,0 +1,10 @@
+./addresses.go
+./admin.go
+./admin_menu.go
+./admin_orders.go
+./admin_region.go
+./bot.go
+./health.go
+./menu.go
+./orders.go
+./profile.go

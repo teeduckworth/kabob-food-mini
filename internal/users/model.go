@@ -11,6 +11,8 @@ type User struct {
 	Username   string    `json:"username"`
 	Phone      string    `json:"phone"`
 	Language   string    `json:"language"`
+	Latitude   *float64  `json:"latitude,omitempty"`
+	Longitude  *float64  `json:"longitude,omitempty"`
 	CreatedAt  time.Time `json:"created_at"`
 }
 
@@ -22,4 +24,6 @@ type UpsertTelegramUserInput struct {
 	Username   string
 	Phone      string
 	Language   string
+	Latitude   *float64
+	Longitude  *float64
 }

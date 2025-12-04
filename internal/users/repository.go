@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -26,15 +27,17 @@ func (r *Repository) UpsertTelegramUser(ctx context.Context, input UpsertTelegra
 	}
 
 	query := `
-INSERT INTO users (telegram_id, first_name, last_name, username, phone, language)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO users (telegram_id, first_name, last_name, username, phone, language, latitude, longitude)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 ON CONFLICT (telegram_id) DO UPDATE SET
     first_name = EXCLUDED.first_name,
     last_name = EXCLUDED.last_name,
     username = EXCLUDED.username,
     phone = COALESCE(NULLIF(EXCLUDED.phone, ''), users.phone),
-    language = EXCLUDED.language
-RETURNING id, telegram_id, first_name, last_name, username, phone, language, created_at;
+    language = EXCLUDED.language,
+    latitude = COALESCE(EXCLUDED.latitude, users.latitude),
+    longitude = COALESCE(EXCLUDED.longitude, users.longitude)
+RETURNING id, telegram_id, first_name, last_name, username, phone, language, latitude, longitude, created_at;
 `
 
 	row := r.pool.QueryRow(ctx, query,
@@ -44,9 +47,12 @@ RETURNING id, telegram_id, first_name, last_name, username, phone, language, cre
 		input.Username,
 		input.Phone,
 		input.Language,
+		input.Latitude,
+		input.Longitude,
 	)
 
 	var user User
+	var lat, lon pgtype.Float8
 	if err := row.Scan(
 		&user.ID,
 		&user.TelegramID,
@@ -55,9 +61,19 @@ RETURNING id, telegram_id, first_name, last_name, username, phone, language, cre
 		&user.Username,
 		&user.Phone,
 		&user.Language,
+		&lat,
+		&lon,
 		&user.CreatedAt,
 	); err != nil {
 		return nil, err
+	}
+	if lat.Valid {
+		val := lat.Float64
+		user.Latitude = &val
+	}
+	if lon.Valid {
+		val := lon.Float64
+		user.Longitude = &val
 	}
 
 	return &user, nil
@@ -70,13 +86,14 @@ func (r *Repository) GetByID(ctx context.Context, id int64) (*User, error) {
 	}
 
 	const query = `
-SELECT id, telegram_id, first_name, last_name, username, phone, language, created_at
+SELECT id, telegram_id, first_name, last_name, username, phone, language, latitude, longitude, created_at
 FROM users
 WHERE id = $1;
 `
 
 	row := r.pool.QueryRow(ctx, query, id)
 	var user User
+	var lat, lon pgtype.Float8
 	if err := row.Scan(
 		&user.ID,
 		&user.TelegramID,
@@ -85,9 +102,19 @@ WHERE id = $1;
 		&user.Username,
 		&user.Phone,
 		&user.Language,
+		&lat,
+		&lon,
 		&user.CreatedAt,
 	); err != nil {
 		return nil, err
+	}
+	if lat.Valid {
+		val := lat.Float64
+		user.Latitude = &val
+	}
+	if lon.Valid {
+		val := lon.Float64
+		user.Longitude = &val
 	}
 
 	return &user, nil

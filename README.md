@@ -34,7 +34,7 @@ docker compose run --rm migrate
 API по умолчанию доступен на `http://localhost:8080` (`/healthz`, `/version`, `/metrics`).
 
 ### Основные эндпоинты
-- `POST /auth/telegram` — обмен initData на JWT + профиль
+- `POST /bot/register` — регистрация через Telegram-бота и выдача JWT
 - `GET /menu`, `GET /regions` — публичные справочники
 - `GET /profile` — профиль и адреса (нужен Bearer JWT)
 - CRUD ` /addresses`
@@ -62,7 +62,6 @@ GO111MODULE=on go run ./cmd/app
 | `REDIS_URL` | URI Redis |
 | `JWT_SECRET` | ключ подписи JWT |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_ADMIN_CHAT_ID` | интеграция с Telegram Bot API |
-| `AUTH_TELEGRAM_INIT_TTL` | TTL для initData |
 | `CACHE_MENU_TTL` / `CACHE_REGIONS_TTL` | TTL кешей |
 | `ADMIN_DEFAULT_USERNAME` / `ADMIN_DEFAULT_PASSWORD` | bootstrap админ |
 | `ADMIN_JWT_EXPIRATION` | TTL админского JWT |
@@ -80,9 +79,33 @@ GO111MODULE=on go run ./cmd/app
 - следите за `/metrics`, подключайте Sentry
 - задокументируйте деплой на VPS/Railway/Render, мониторинг, бэкапы
 
+## Telegram Bot (Go + go-telegram-bot-api)
+
+Отдельный процесс, который ведёт диалог с пользователем в чате, собирает телефон/имя/локацию и дергает `POST /bot/register`, чтобы выдать ссылку на мини-апп.
+
+### Запуск
+```bash
+export TELEGRAM_BOT_TOKEN=123:ABC
+export BOT_BACKEND_URL=http://localhost:8080
+export MINI_APP_URL=https://kabob-food-mini.vercel.app
+go run ./cmd/bot
+```
+
+### Env
+- `TELEGRAM_BOT_TOKEN` — токен бота (обязателен)
+- `BOT_BACKEND_URL` — базовый URL API (по умолчанию `http://localhost:8080`)
+- `MINI_APP_URL` — ссылка на мини-апп, к ней добавится `?token=...`
+- `BOT_DEBUG` — включает debug-логи библиотеки (false по умолчанию)
+
 ## Mini App (Next.js + Tailwind)
 
 Клиент для Telegram Mini App: меню, корзина, оформление заказа, профиль/адреса.
+
+### Admin Web Panel
+- Находится в том же Next.js приложении на маршруте `/admin`
+- Авторизация через `POST /admin/login`, токен хранится в `localStorage`
+- После входа доступна премиальная панель: статистика, формы для создания категорий/блюд и быстрые переключатели активности позиций
+- Указывайте `NEXT_PUBLIC_API_URL`, чтобы панель работала против нужного бэкенда
 
 ### Запуск
 ```bash
@@ -96,7 +119,6 @@ npm run dev
 NEXT_PUBLIC_API_URL=http://localhost:8080
 # для локальной отладки без Telegram
 NEXT_PUBLIC_DEV_TOKEN=your-local-jwt
-NEXT_PUBLIC_DEV_INIT_DATA=query_string_from_telegram
 ```
 
 ### Структура

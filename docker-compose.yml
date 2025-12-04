@@ -32,7 +32,9 @@ services:
     command: ["-path", "/migrations", "-database", "postgres://postgres:postgres@postgres:5432/kabobfood?sslmode=disable", "up"]
 
   app:
-    build: .
+    build:
+      context: .
+      target: app
     restart: unless-stopped
     depends_on:
       postgres:
@@ -45,10 +47,24 @@ services:
       DB_URL: postgres://postgres:postgres@postgres:5432/kabobfood?sslmode=disable
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET: supersecret
-      TELEGRAM_BOT_TOKEN: your-token
-      TELEGRAM_ADMIN_CHAT_ID: "0"
+      TELEGRAM_BOT_TOKEN: 8399759865:AAHVboNkIEF8BSnbUoAHXx1YvPBgYPzEQhI
+      TELEGRAM_ADMIN_CHAT_ID: 6618506604
     ports:
       - "8080:8080"
+
+  bot:
+    build:
+      context: .
+      target: bot
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_started
+    environment:
+      TELEGRAM_BOT_TOKEN: 8399759865:AAHVboNkIEF8BSnbUoAHXx1YvPBgYPzEQhI
+      BOT_BACKEND_URL: http://app:8080
+      MINI_APP_URL: https://kabob-food-mini.vercel.app
+      BOT_DEBUG: "false"
 
 volumes:
   postgres-data:

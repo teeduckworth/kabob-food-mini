@@ -1,8 +1,10 @@
 package http
 
 import (
+	"strings"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -21,8 +23,9 @@ type RouteRegister interface {
 type RouterParams struct {
 	Logger            *zap.Logger
 	AppEnv            string
+	CORSOrigins       []string
 	HealthHandler     *handlers.HealthHandler
-	AuthHandler       *handlers.AuthHandler
+	BotHandler        *handlers.BotHandler
 	MenuHandler       *handlers.MenuHandler
 	AdminAuthHandler  *handlers.AdminAuthHandler
 	AuthMiddleware    gin.HandlerFunc
@@ -40,8 +43,11 @@ func NewRouter(params RouterParams) *gin.Engine {
 
 	router := gin.New()
 
+	corsCfg := buildCORSConfig(params.CORSOrigins)
+
 	router.Use(ginzap.Ginzap(params.Logger, time.RFC3339, true))
 	router.Use(ginzap.RecoveryWithZap(params.Logger, true))
+	router.Use(cors.New(corsCfg))
 	if params.Metrics != nil {
 		router.Use(params.Metrics.Middleware())
 		router.GET("/metrics", gin.WrapH(promhttp.Handler()))
@@ -49,8 +55,8 @@ func NewRouter(params RouterParams) *gin.Engine {
 
 	root := router.Group("")
 	params.HealthHandler.Register(root)
-	if params.AuthHandler != nil {
-		params.AuthHandler.Register(root)
+	if params.BotHandler != nil {
+		params.BotHandler.Register(root)
 	}
 	if params.AdminAuthHandler != nil {
 		params.AdminAuthHandler.Register(root)
@@ -80,4 +86,43 @@ func NewRouter(params RouterParams) *gin.Engine {
 	}
 
 	return router
+}
+
+func buildCORSConfig(origins []string) cors.Config {
+	cleanOrigins := normalizeOrigins(origins)
+	cfg := cors.Config{
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
+		AllowHeaders: []string{"Origin", "Content-Type", "Authorization"},
+		MaxAge:       12 * time.Hour,
+	}
+	if len(cleanOrigins) == 0 {
+		cfg.AllowAllOrigins = true
+	} else {
+		cfg.AllowOrigins = cleanOrigins
+	}
+	return cfg
+}
+
+func normalizeOrigins(origins []string) []string {
+	if len(origins) == 0 {
+		return nil
+	}
+	clean := make([]string, 0, len(origins))
+	seen := make(map[string]struct{}, len(origins))
+	for _, origin := range origins {
+		trimmed := strings.ToLower(strings.TrimSpace(origin))
+		trimmed = strings.TrimRight(trimmed, "/")
+		if trimmed == "" {
+			continue
+		}
+		if _, ok := seen[trimmed]; ok {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		clean = append(clean, trimmed)
+	}
+	if len(clean) == 0 {
+		return nil
+	}
+	return clean
 }

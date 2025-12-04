@@ -16,9 +16,9 @@ paths:
       responses:
         '200':
           description: Version payload
-  /auth/telegram:
+  /bot/register:
     post:
-      summary: Exchange Telegram initData for JWT
+      summary: Register user via Telegram bot and issue JWT
       requestBody:
         required: true
         content:
@@ -26,9 +26,28 @@ paths:
             schema:
               type: object
               properties:
-                init_data:
+                telegram_id:
+                  type: integer
+                phone:
                   type: string
-              required: [init_data]
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                name:
+                  type: string
+                  description: optional alias for first_name
+                location:
+                  type: object
+                  properties:
+                    latitude:
+                      type: number
+                      format: double
+                    longitude:
+                      type: number
+                      format: double
+                  required: [latitude, longitude]
+              required: [telegram_id, phone, location]
       responses:
         '200':
           description: Token + profile
@@ -499,6 +518,12 @@ components:
           type: string
         language:
           type: string
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
     Address:
       type: object
       properties:

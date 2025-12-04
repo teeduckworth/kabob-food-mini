@@ -48,6 +48,8 @@ var (
 	ErrExpiredInitData = errors.New("telegram init data expired")
 	// ErrMissingUserPayload indicates the user JSON chunk is missing.
 	ErrMissingUserPayload = errors.New("telegram user payload missing")
+	// ErrInvalidRegisterInput indicates mandatory registration fields are missing.
+	ErrInvalidRegisterInput = errors.New("invalid bot registration input")
 )
 
 // NewService builds a Service instance.
@@ -81,6 +83,16 @@ func NewService(cfg Config) (*Service, error) {
 type AuthResult struct {
 	Token   string      `json:"token"`
 	Profile *users.User `json:"profile"`
+}
+
+// BotRegisterInput contains data collected by the Telegram bot for onboarding.
+type BotRegisterInput struct {
+	TelegramID int64
+	FirstName  string
+	LastName   string
+	Phone      string
+	Latitude   *float64
+	Longitude  *float64
 }
 
 // Authenticate verifies Telegram initData, upserts user, and issues JWT.
@@ -121,6 +133,41 @@ func (s *Service) Authenticate(ctx context.Context, initData string) (*AuthResul
 		return nil, err
 	}
 
+	return &AuthResult{Token: token, Profile: profile}, nil
+}
+
+// RegisterBotUser upserts a user from bot-provided data and issues a JWT.
+func (s *Service) RegisterBotUser(ctx context.Context, input BotRegisterInput) (*AuthResult, error) {
+	if input.TelegramID == 0 {
+		return nil, ErrInvalidRegisterInput
+	}
+	firstName := strings.TrimSpace(input.FirstName)
+	if firstName == "" {
+		return nil, ErrInvalidRegisterInput
+	}
+	lastName := strings.TrimSpace(input.LastName)
+	phone := strings.TrimSpace(input.Phone)
+	if phone == "" {
+		return nil, ErrInvalidRegisterInput
+	}
+	if input.Latitude == nil || input.Longitude == nil {
+		return nil, ErrInvalidRegisterInput
+	}
+	profile, err := s.userRepo.UpsertTelegramUser(ctx, users.UpsertTelegramUserInput{
+		TelegramID: input.TelegramID,
+		FirstName:  firstName,
+		LastName:   lastName,
+		Phone:      phone,
+		Latitude:   input.Latitude,
+		Longitude:  input.Longitude,
+	})
+	if err != nil {
+		return nil, err
+	}
+	token, err := s.issueJWT(profile)
+	if err != nil {
+		return nil, err
+	}
 	return &AuthResult{Token: token, Profile: profile}, nil
 }
 

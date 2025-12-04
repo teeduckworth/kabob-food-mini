@@ -29,6 +29,7 @@ type HTTPConfig struct {
 	ReadTimeout  time.Duration `env:"READ_TIMEOUT" envDefault:"10s"`
 	WriteTimeout time.Duration `env:"WRITE_TIMEOUT" envDefault:"10s"`
 	IdleTimeout  time.Duration `env:"IDLE_TIMEOUT" envDefault:"60s"`
+	CORSOrigins  []string      `env:"CORS_ORIGINS" envSeparator:","`
 }
 
 // DatabaseConfig declares PostgreSQL connection options.

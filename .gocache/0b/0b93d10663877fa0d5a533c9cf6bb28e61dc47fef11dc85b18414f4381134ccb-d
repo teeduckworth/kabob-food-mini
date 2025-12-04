@@ -1,0 +1,4 @@
+./admin_params.go
+./model.go
+./repository.go
+./service.go
