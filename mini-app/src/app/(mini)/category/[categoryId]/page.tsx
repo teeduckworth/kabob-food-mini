@@ -8,7 +8,7 @@ import { api } from '@/lib/api';
 import { CartDrawer } from '@/components/CartDrawer';
 import { useCartStore } from '@/store/cart';
 import { PremiumProductCard } from '@/components/PremiumProductCard';
-import { ChevronDown, LocationIcon, ProfileIcon } from '@/components/PremiumIcons';
+import { ChevronDown, LocationIcon } from '@/components/PremiumIcons';
 import type { RegionsResponse } from '@/types/api';
 
 const menuFetcher = () => api.getMenu();
@@ -49,10 +49,11 @@ export default function CategoryPage() {
           </button>
           <Link
             href="/profile"
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-600 shadow-[0_10px_35px_rgba(15,23,42,0.08)]"
-            aria-label="Профиль"
+            className="group relative flex h-14 w-14 items-center justify-center rounded-full border border-white/40 bg-gradient-to-br from-slate-900 to-slate-700 text-lg font-semibold text-white shadow-[0_15px_40px_rgba(15,23,42,0.35)] transition hover:scale-105"
+            aria-label="Мой профиль"
           >
-            <ProfileIcon className="h-6 w-6" />
+            <span>Я</span>
+            <span className="absolute -bottom-1 right-0 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-slate-900/80" aria-hidden />
           </Link>
         </header>
 

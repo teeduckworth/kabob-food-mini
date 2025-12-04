@@ -128,6 +128,7 @@ func New(cfg *config.Config, log *zap.Logger) (*App, error) {
 	adminMiddleware := middleware.AdminJWT(cfg.JWT.Secret)
 
 	healthHandler := handlers.NewHealthHandler(Version)
+	authHandler := handlers.NewAuthHandler(authService)
 	botHandler := handlers.NewBotHandler(authService)
 	menuHandler := handlers.NewMenuHandler(menuService)
 
@@ -136,6 +137,7 @@ func New(cfg *config.Config, log *zap.Logger) (*App, error) {
 		AppEnv:            cfg.AppEnv,
 		CORSOrigins:       cfg.HTTP.CORSOrigins,
 		HealthHandler:     healthHandler,
+		AuthHandler:       authHandler,
 		BotHandler:        botHandler,
 		MenuHandler:       menuHandler,
 		AdminAuthHandler:  adminAuthHandler,

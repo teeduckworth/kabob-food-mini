@@ -2,6 +2,7 @@ import type {
   Address,
   AddressInput,
   AddressesResponse,
+  AuthResult,
   CreateOrderPayload,
   MenuResponse,
   Order,
@@ -55,6 +56,14 @@ async function request<T>(path: string, init?: RequestOptions): Promise<T> {
 }
 
 export const api = {
+  authenticateTelegram: (initData: string) =>
+    request<AuthResult>(
+      '/auth/telegram',
+      {
+        method: 'POST',
+        body: JSON.stringify({ init_data: initData }),
+      }
+    ),
   getMenu: () => request<MenuResponse>('/menu'),
   getRegions: () => request<RegionsResponse>('/regions'),
   getProfile: () => request<Profile>('/profile', { auth: true }),

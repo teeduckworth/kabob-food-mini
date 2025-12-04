@@ -25,6 +25,7 @@ type RouterParams struct {
 	AppEnv            string
 	CORSOrigins       []string
 	HealthHandler     *handlers.HealthHandler
+	AuthHandler       *handlers.AuthHandler
 	BotHandler        *handlers.BotHandler
 	MenuHandler       *handlers.MenuHandler
 	AdminAuthHandler  *handlers.AdminAuthHandler
@@ -55,6 +56,9 @@ func NewRouter(params RouterParams) *gin.Engine {
 
 	root := router.Group("")
 	params.HealthHandler.Register(root)
+	if params.AuthHandler != nil {
+		params.AuthHandler.Register(root)
+	}
 	if params.BotHandler != nil {
 		params.BotHandler.Register(root)
 	}

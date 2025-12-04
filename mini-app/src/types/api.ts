@@ -71,6 +71,11 @@ export interface Profile {
   addresses: Address[];
 }
 
+export interface AuthResult {
+  token: string;
+  profile: Profile;
+}
+
 export interface CreateOrderPayload {
   client_request_id: string;
   type: 'delivery' | 'pickup';

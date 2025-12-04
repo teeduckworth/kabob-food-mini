@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { api, setAuthToken } from '@/lib/api';
+import { getTelegramWebApp } from '@/lib/telegram';
 import type { Profile } from '@/types/api';
 
 interface AuthContextValue {
@@ -61,12 +62,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const finishAuth = useCallback(
-    async (jwt: string) => {
+    async (jwt: string, profileOverride?: Profile | null) => {
       const storage = getLocalStorage();
       storage?.setItem(TOKEN_STORAGE_KEY, jwt);
       setAuthToken(jwt);
       setToken(jwt);
-      await loadProfile();
+      if (profileOverride) {
+        setProfile(profileOverride);
+      } else {
+        await loadProfile();
+      }
       setStatus('ready');
       setError(null);
     },
@@ -96,8 +101,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    const storedToken = storage.getItem(TOKEN_STORAGE_KEY);
+    let storedToken = storage.getItem(TOKEN_STORAGE_KEY);
     if (!storedToken) {
+      const webApp = getTelegramWebApp();
+      const initData = webApp?.initData;
+      if (initData) {
+        try {
+          const authResult = await api.authenticateTelegram(initData);
+          storedToken = authResult.token;
+          await finishAuth(storedToken, authResult.profile);
+          return;
+        } catch (err) {
+          console.error('Telegram init auth failed', err);
+        }
+      }
       setAuthToken(null);
       setToken(null);
       setStatus('error');
