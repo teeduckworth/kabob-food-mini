@@ -62,7 +62,7 @@ services:
         condition: service_started
     environment:
       TELEGRAM_BOT_TOKEN: 8399759865:AAHVboNkIEF8BSnbUoAHXx1YvPBgYPzEQhI
-      BOT_BACKEND_URL: http://app:8080
+      BOT_BACKEND_URL: https://kabob-food-mini-production.up.railway.app
       MINI_APP_URL: https://kabob-food-mini.vercel.app
       BOT_DEBUG: "false"
 

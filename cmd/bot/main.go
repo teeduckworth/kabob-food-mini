@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/caarlos0/env/v10"
@@ -13,7 +15,6 @@ import (
 
 type config struct {
 	TelegramToken string `env:"TELEGRAM_BOT_TOKEN,required"`
-	BackendURL    string `env:"BOT_BACKEND_URL" envDefault:"http://localhost:8080"`
 	MiniAppURL    string `env:"MINI_APP_URL" envDefault:"https://kabob-food-mini.vercel.app"`
 	Debug         bool   `env:"BOT_DEBUG" envDefault:"false"`
 }
@@ -23,10 +24,15 @@ func main() {
 	if err := env.Parse(&cfg); err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
+	backendURL := strings.TrimSpace(os.Getenv("BOT_BACKEND_URL"))
+	if backendURL == "" {
+		backendURL = "http://localhost:8080"
+	}
+	log.Printf("bot backend url: %s", backendURL)
 
 	service, err := bot.New(bot.Config{
 		Token:      cfg.TelegramToken,
-		BackendURL: cfg.BackendURL,
+		BackendURL: backendURL,
 		MiniAppURL: cfg.MiniAppURL,
 		Debug:      cfg.Debug,
 	})

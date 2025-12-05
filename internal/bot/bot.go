@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -128,14 +129,26 @@ func (b *Bot) handleContact(msg *tgbotapi.Message) {
 		b.reply(msg.Chat.ID, "Не удалось прочитать номер телефона. Попробуйте снова отправить контакт.")
 		return
 	}
-	sess.Stage = stageNeedName
-	text := "Спасибо! Теперь напишите, как к вам обращаться?"
-	b.reply(msg.Chat.ID, text)
+	b.askForName(msg.Chat.ID, sess)
 }
 
 func (b *Bot) handleText(msg *tgbotapi.Message) {
 	sess := b.ensureSession(msg.From.ID)
 	switch sess.Stage {
+	case stageNeedContact:
+		phone := normalizePhone(msg.Text)
+		if phone == "" {
+			b.reply(msg.Chat.ID, "Пожалуйста, отправьте номер телефона (можно вручную) или воспользуйтесь кнопкой.")
+			return
+		}
+		sess.Phone = phone
+		if sess.FirstName == "" {
+			sess.FirstName = strings.TrimSpace(msg.From.FirstName)
+		}
+		if sess.LastName == "" {
+			sess.LastName = strings.TrimSpace(msg.From.LastName)
+		}
+		b.askForName(msg.Chat.ID, sess)
 	case stageNeedName:
 		name := strings.TrimSpace(msg.Text)
 		if name == "" {
@@ -164,7 +177,7 @@ func (b *Bot) handleLocation(msg *tgbotapi.Message) {
 		return
 	}
 	deleteReply := tgbotapi.NewRemoveKeyboard(true)
-	send := tgbotapi.NewMessage(msg.Chat.ID, "Отлично! Вот ссылка на мини-апп:")
+	send := tgbotapi.NewMessage(msg.Chat.ID, "Отлично! Нажмите кнопку ниже, чтобы открыть мини-апп.")
 	send.ReplyMarkup = deleteReply
 	b.api.Send(send)
 }
@@ -213,13 +226,8 @@ func (b *Bot) registerUser(msg *tgbotapi.Message) error {
 		return errors.New("получен пустой токен")
 	}
 	link := b.buildMiniAppLink(regResp.Token)
-	message := tgbotapi.NewMessage(msg.Chat.ID, link)
-	keyboard := tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonURL("Открыть мини-апп", link),
-		),
-	)
-	message.ReplyMarkup = keyboard
+	message := tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("Если кнопка не появилась, воспользуйтесь ссылкой: %s", link))
+	message.ReplyMarkup = newMiniAppKeyboard(link)
 	if _, err := b.api.Send(message); err != nil {
 		return err
 	}
@@ -253,6 +261,12 @@ func (b *Bot) promptLocation(chatID int64) {
 func (b *Bot) reply(chatID int64, text string) {
 	msg := tgbotapi.NewMessage(chatID, text)
 	b.api.Send(msg)
+}
+
+func (b *Bot) askForName(chatID int64, sess *session) {
+	sess.Stage = stageNeedName
+	text := "Спасибо! Теперь напишите, как к вам обращаться?"
+	b.reply(chatID, text)
 }
 
 func (b *Bot) buildMiniAppLink(token string) string {
@@ -315,4 +329,56 @@ type locationPayload struct {
 
 type registerResponse struct {
 	Token string `json:"token"`
+}
+
+func normalizePhone(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	var b strings.Builder
+	var wroteDigits bool
+	for _, r := range raw {
+		if r == '+' && !wroteDigits && b.Len() == 0 {
+			b.WriteRune(r)
+			continue
+		}
+		if unicode.IsDigit(r) {
+			b.WriteRune(r)
+			wroteDigits = true
+		}
+	}
+	phone := b.String()
+	if phone == "" || phone == "+" {
+		return ""
+	}
+	return phone
+}
+
+// inline keyboard payload with web_app support (older tgbotapi lacks this type).
+type miniAppKeyboard struct {
+	InlineKeyboard [][]miniAppButton `json:"inline_keyboard"`
+}
+
+type miniAppButton struct {
+	Text   string          `json:"text"`
+	WebApp *miniAppWebInfo `json:"web_app,omitempty"`
+	URL    string          `json:"url,omitempty"`
+}
+
+type miniAppWebInfo struct {
+	URL string `json:"url"`
+}
+
+func newMiniAppKeyboard(link string) miniAppKeyboard {
+	return miniAppKeyboard{
+		InlineKeyboard: [][]miniAppButton{
+			{
+				{Text: "Открыть мини-апп", WebApp: &miniAppWebInfo{URL: link}},
+			},
+			{
+				{Text: "Открыть в браузере", URL: link},
+			},
+		},
+	}
 }
